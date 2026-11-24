@@ -1,0 +1,8 @@
+# customer data must not be published (policy s10)
+train.csv
+test_unlabelled.csv
+resolution_log.csv
+*.pdf.bak
+.venv/
+__pycache__/
+data_not_included/

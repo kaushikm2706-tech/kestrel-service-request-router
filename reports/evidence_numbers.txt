@@ -1,0 +1,93 @@
+== Rolling-origin: train on everything before month m, test on month m (last 6 months)
+  month   n  model_acc  old_bot_acc
+2026-01 702      0.849        0.782
+2026-02 687      0.834        0.753
+2026-03 777      0.883        0.788
+2026-04 697      0.867        0.789
+2026-05 734      0.857        0.770
+2026-06 702      0.846        0.741
+mean model 0.856  mean old bot 0.770
+
+== Final holdout: train before 2026-04-01, test on Apr-Jun 2026
+n=2133  model accuracy=0.8565 (95% CI 0.841-0.871)   old bot=0.7665
+A model trained to copy the bot's labels: agrees with bot 0.9766 but right only 0.7778
+Macro-F1: 0.855
+                       precision    recall  f1-score   support
+
+              Billing      0.896     0.882     0.889       255
+Filters & Consumables      0.863     0.850     0.856       207
+      Installs & Demo      0.823     0.838     0.830       321
+       Product Advice      0.865     0.810     0.837       269
+              Repairs      0.847     0.907     0.876       496
+Returns & Replacement      0.867     0.837     0.852       326
+      Warranty Claims      0.854     0.834     0.844       259
+
+             accuracy                          0.857      2133
+            macro avg      0.859     0.851     0.855      2133
+         weighted avg      0.857     0.857     0.856      2133
+
+                       Billing  Filters   Installs  Product   Repairs  Returns   Warranty
+Billing                    225         5         5         4        9         5         2
+Filters & Consumables        1       176         8         5       11         2         4
+Installs & Demo              7         6       269         8       12        12         7
+Product Advice               2         5        11       218       21         4         8
+Repairs                      4         4        14         5      450         9        10
+Returns & Replacement        7         6         7         7       20       273         6
+Warranty Claims              5         2        13         5        8        10       216
+
+== Confidence bands (holdout)
+            size   mean  share
+band                          
+(0.0, 0.4]   230  0.209  0.108
+(0.4, 0.6]    96  0.240  0.045
+(0.6, 0.8]    32  0.531  0.015
+(0.8, 0.9]    61  0.967  0.029
+(0.9, 1.0]  1714  0.980  0.804
+auto-route (>=0.80): 83.2% of requests, 98.0% right;  needs clarification: 16.8% of requests, 24.6% right
+wrong answers that are auto-routed: 36 of 306 wrong (12%)
+
+== Ceiling: what any tool could do
+vague requests (model <60% sure): 15.3% of rows; best guess right 21.8% of the time
+Even a perfect reader on clear rows (assume 98%) + chance on vague => about 86.4%
+
+== Why not copy the bot: bot vs real outcome (all history)
+bot right on 77.2% of all 10817 closed requests; transfers per request 0.361; share needing >=1 transfer 24.9%
+bot-misrouted: 2471 (22.8%), mean transfers when misrouted 1.44
+final_team             Billing  Filters & Consumables  Installs & Demo  Product Advice  Repairs  Returns & Replacement  Warranty Claims
+team_label                                                                                                                             
+Billing                   1071                      9              146               7      192                    125              106
+Filters & Consumables       43                    872               67              40      315                     56               65
+Installs & Demo              7                      7             1146              10       10                      2                3
+Product Advice               9                      9                6            1134        9                      4                8
+Repairs                    178                    157              218             182     1990                    214              187
+Returns & Replacement        6                      7                7               7        7                   1132                8
+Warranty Claims              4                      5                6               9        8                      6             1001
+
+== Money (policy s4: Rs 305 per transfer, Rs 260 extra contact per misrouted request)
+requests per year (Jul-Sep x4): 8712;  cost of one misrouted request = 1.44 x 305 + 260 = Rs 698
+bot misroute rate (Apr-Jun) 0.233 -> Rs 14.2 lakh/yr
+model misroute rate 0.143 -> Rs 8.7 lakh/yr (if every wrong one costs the same)
+handling saving vs bot: Rs 5.5 lakh/yr; plus licence Rs 3.2 lakh; hosting ~ Rs 0.2-0.3 lakh (estimate)
+saving range using the 95% CI of accuracy: Rs 4.5 to Rs 6.3 lakh/yr (handling only)
+hybrid (auto-route >=0.80, ask the rest one question at Rs 260): Rs 4.8 lakh/yr -> saving vs bot Rs 9.4 lakh/yr
+
+== Workload by team: bot's queue vs where requests actually closed (all history, per month)
+                       bot_queue  closed_by  diff_%
+Repairs                    208.4      168.7   -19.0
+Installs & Demo             79.0      106.4    34.7
+Returns & Replacement       78.3      102.6    31.1
+Product Advice              78.6       92.6    17.8
+Warranty Claims             69.3       91.9    32.6
+Billing                    110.4       87.9   -20.4
+Filters & Consumables       97.2       71.1   -26.9
+
+== Zoho resolution-time check
+             count  median  share_negative
+source                                    
+crm           6502    9.47            0.00
+legacy_zoho   4320    4.02            0.26
+after adding 5.5h to Zoho rows (UTC->IST):
+             median  <lambda_0>
+source                         
+crm            9.47         0.0
+legacy_zoho    9.52         0.0

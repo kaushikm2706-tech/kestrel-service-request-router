@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kestrel service-request router</title>
+<style>
+ body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f4f6f8;margin:0;color:#1d2733}
+ .wrap{max-width:760px;margin:24px auto;padding:0 16px}
+ h1{font-size:22px;margin:0 0 4px} .sub{color:#5b6b7b;margin:0 0 16px;font-size:14px}
+ .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px}
+ label{display:block;font-size:13px;color:#46576a;margin:10px 0 4px}
+ textarea,select{width:100%;padding:9px;border:1px solid #c9d2db;border-radius:6px;font-size:15px;box-sizing:border-box}
+ .row{display:flex;gap:10px}.row>div{flex:1}
+ button{background:#0b5cad;color:#fff;border:0;border-radius:6px;padding:10px 16px;font-size:15px;cursor:pointer;margin-top:12px}
+ button.ghost{background:#e8eef5;color:#25415f;margin:6px 6px 0 0;padding:6px 10px;font-size:13px}
+ .team{font-size:26px;font-weight:700;margin:2px 0}
+ .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13px;font-weight:600}
+ .auto{background:#dff5e3;color:#14692a}.clar{background:#fff0d6;color:#8a5a00}
+ .bar{height:10px;background:#e5eaf0;border-radius:6px;overflow:hidden;margin:8px 0}.bar>i{display:block;height:100%;background:#0b5cad}
+ ul{margin:6px 0 0 18px;padding:0} li{margin:5px 0} .err{color:#b3261e}.small{font-size:12px;color:#6b7b8b}
+</style></head><body><div class="wrap">
+<h1>Kestrel service-request router</h1>
+<p class="sub">Type a customer message. It shows which team should get it, how sure it is, and why. No paid service is used.</p>
+<div class="card">
+ <label for="t">Customer message</label>
+ <textarea id="t" rows="3" placeholder="e.g. installer did not turn up for cooktop, i paid extra for this"></textarea>
+ <div class="row">
+  <div><label>Product</label><select id="p"><option value="">(not given)</option><option>Air Fryer</option><option>Ceiling Fan</option><option>Induction Cooktop</option><option>Mixer Grinder</option><option>Robot Vacuum</option><option>Room Heater</option><option>Water Purifier</option></select></div>
+  <div><label>Warranty</label><select id="w"><option value="">(not given)</option><option value="in_warranty">in warranty</option><option value="shield">Kestrel Shield</option><option value="out_of_warranty">out of warranty</option></select></div>
+  <div><label>Channel</label><select id="c"><option value="">(not given)</option><option>chat</option><option>whatsapp</option><option>ivr</option><option>email</option></select></div>
+ </div>
+ <button id="go">Route it</button>
+ <div style="margin-top:10px" class="small">Try an example:
+  <button class="ghost" data-x="water purifier stopped working after 9 months paid on upi">paid but it is a fault</button>
+  <button class="ghost" data-x="want to reschedule installation of cooktop, which cooktop is right for 4 people">two issues</button>
+  <button class="ghost" data-x="someone contact me about my mixer">vague</button>
+  <button class="ghost" data-x="need gst invoice for my air fryer order">billing</button></div>
+</div>
+<div id="out"></div></div>
+<script>
+const $=id=>document.getElementById(id);
+document.querySelectorAll('button.ghost').forEach(b=>b.onclick=()=>{$('t').value=b.dataset.x;go()});
+$('go').onclick=go;
+async function go(){
+  const out=$('out');out.innerHTML='';
+  const body={request_text:$('t').value,product_family:$('p').value,warranty_status:$('w').value,channel:$('c').value};
+  let r,j;
+  try{r=await fetch('/route',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});j=await r.json();}
+  catch(e){out.innerHTML='<div class="card err">Could not reach the service. Is it running?</div>';return;}
+  if(!r.ok){out.innerHTML='<div class="card err">'+(j.error||'Something went wrong')+'</div>';return;}
+  const auto=j.action==='auto_route';
+  out.innerHTML='<div class="card"><span class="pill '+(auto?'auto':'clar')+'">'+(auto?'Route automatically':'Needs a clarifying question first')+'</span>'
+   +'<div class="team">'+(auto?j.recommended_team:'Best guess: '+j.recommended_team)+'</div>'
+   +'<div class="small">Confidence '+Math.round(j.confidence*100)+'%</div><div class="bar"><i style="width:'+Math.round(j.confidence*100)+'%"></i></div>'
+   +'<b>Why</b><ul>'+j.reasons.map(x=>'<li>'+x.replace(/</g,'&lt;')+'</li>').join('')+'</ul>'
+   +'<div class="small" style="margin-top:10px">Next most likely: '+j.alternatives.map(a=>a.team+' ('+Math.round(a.probability*100)+'%)').join(', ')+'</div></div>';
+}
+</script></body></html>
